@@ -1,0 +1,40 @@
+https://stackoverflow.com/questions/26196467/sending-email-via-node-js-using-nodemailer-is-not-working (#1)
+https://developers.google.com/gmail/api/quickstart/nodejs (#2)
+https://console.cloud.google.com/apis/credentials?project=<ProjectID> 
+steps: 
+    create your app in the google console than add oAuth inside écran constamment oAuth ajouter les utilisateurs ajouter votre mail 
+
+1) Go to google console and create new project 
+2) put users as interne and add your email to the Add users if the project is already created do:
+    - Go to OAuth consent screen (Oauth consent screen ). 
+        exemple : https://console.cloud.google.com/apis/credentials/consent?orgonly=true&project=chat-app-363100&supportedpurview=organizationId
+    - Go to +Add users, under test users .
+        https://console.cloud.google.com/home/dashboard?orgonly=true&project=chat-app-363100&supportedpurview=organizationId
+    - Add the users for the test (even the owner email address if not working without it)
+
+3) go to dashboard of the console and choose identifiants click on create new identifiant et choisir créer un ID oAuth
+    type application siteweb laissez tt comme il est 
+
+    quand vous rajoutez un identifiant faut s'assurer qu'il y a un redirect uri 
+
+4) dés que vous avez le fichier téléchargez le et renommez credentials.json et copier dans le répértoire 
+5) de (#2) copier le code fournit et mettez le dans un fichier gmail.js dans le même répértoire que celui de credentials.json 
+6) dans gmail.js mettez
+    const SCOPES = ['https://mail.google.com/'] (comme suggérer par nodemailer documentation )
+
+
+!!!!!! important !!!!!!! 
+
+7) au terminal :  
+    npm install @google-cloud/local-auth googleapis
+    node gmail.js # the code in it has been provided by google 
+
+
+8) dans le siteweb vous devrez vous connecter à votre compte et mettre ok  dés que c finit 
+9) vous aurez un fichier token.json prennez le client_id,client_secret,refresh_token l'@ mail que vous vous avez inscrit et mettez les dans un fichier .env 
+
+[.env]
+    GMAIL_ID=<YOUR_EMAIL>
+    GOOGLE_PROJECT_CLIENT_ID=<YOUR_CLIENT_ID>
+    GOOGLE_CLIENT_SECRET=<YOUR_CLIENT_SECRET>
+    GOOGLE_REFRESH_TOKEN=<YOUR_REFRESH_TOKEN>

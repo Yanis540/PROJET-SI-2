@@ -1,0 +1,236 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Commune {
+  num_commune Int    @id
+  nom_commune String @db.VarChar(255)
+
+  //! arrondissement 
+  arrondissement     Arrondissement @relation(fields: [num_arrondissement], references: [num_arrondissement])
+  num_arrondissement Int
+
+  //! matricule maire 
+  maire           Officier? @relation(fields: [matricule_maire], references: [matricule], name: "maire commune")
+  matricule_maire Int?      @unique
+
+  //! Ville 
+  ville     Ville @relation(fields: [num_ville], references: [num_ville])
+  num_ville Int
+
+  //! officiers 
+  officiers Officier[]
+  //! registres 
+  registres Registre[]
+  //! actes 
+  actes     Acte[]
+}
+
+model Arrondissement {
+  num_arrondissement Int       @id
+  nom_arrondissement String    @db.VarChar(255)
+  province           Province  @relation(fields: [num_province], references: [num_province])
+  num_province       Int
+  communes           Commune[]
+}
+
+model Province {
+  num_province Int              @id
+  nom_province String           @db.VarChar(255)
+  ville        Ville            @relation(fields: [num_ville], references: [num_ville])
+  num_ville    Int
+  province     Arrondissement[]
+}
+
+model Ville {
+  num_ville  Int        @id
+  nom_ville  String     @db.VarChar(255)
+  superficie Float
+  pays       String     @db.VarChar(255)
+  communes   Commune[]
+  provinces  Province[]
+}
+
+model Officier {
+  matricule   Int      @id @default(autoincrement())
+  nom         String   @db.VarChar(255)
+  prenom      String   @db.VarChar(255)
+  email       String   @unique @db.VarChar(255)
+  password    String   @db.VarChar(255)
+  date_entree DateTime @default(now())
+  isValid     Boolean  @default(false)
+  photo       Bytes?   @db.ByteA
+
+  //! roles par défaut à ajouter lors de la création 
+  role Role
+
+  //! commune ou l'officier travaille 
+  commune     Commune @relation(fields: [num_commune], references: [num_commune], onDelete: Cascade)
+  num_commune Int
+
+  //! si l'officier est maire on garde le numéro de sa commune
+  maire_commune Commune? @relation("maire commune")
+
+  //! si il cede sa place on sauvgarde 
+  delegation_maire Delegation[]
+
+  //! les fois ou il a ete delege 
+  delegation_nouveau_maire Delegation[] @relation("nouveau maire")
+
+  actes Acte[]
+  Token Token[] @relation("token")
+}
+
+enum Role {
+  ADMIN
+  MAIRE
+  OFFICIER
+  CONSULAIRE
+}
+
+model Registre {
+  num_registre String @id @default(uuid())
+  annee        Int
+
+  //! types duy registres enum 
+  type_registre TypeActe
+
+  //! commune
+  commune     Commune @relation(fields: [num_commune], references: [num_commune], onDelete: Cascade)
+  num_commune Int
+  //! actes 
+  actes       Acte[]
+
+  @@unique([annee, num_commune, type_registre], name: "annee_commune_type_unique")
+}
+
+model Delegation {
+  num_delegation          Int      @id @default(autoincrement())
+  Date                    DateTime @default(now())
+  //! matricule maire ayant délégué 
+  maire                   Officier @relation(fields: [matricule_maire], references: [matricule])
+  matricule_maire         Int
+  //! matricule du nouveau maire 
+  nouveau_maire           Officier @relation(fields: [matricule_nouveau_maire], references: [matricule], name: "nouveau maire", onDelete: Cascade)
+  matricule_nouveau_maire Int
+}
+
+model Personne {
+  NIN          Int           @id
+  CNI          Int
+  nom          String        @db.VarChar(255)
+  prenom       String        @db.VarChar(255)
+  declarations Acte[]        @relation("declarations")
+  temoignages  ActeMariage[] @relation("temoignages")
+}
+
+model Acte {
+  num_acte           String   @id @default(uuid())
+  date               DateTime @default(now())
+  type               TypeActe
+  lieu               String   @db.VarChar(255)
+  //! registre 
+  registre           Registre @relation(fields: [num_registre], references: [num_registre], onDelete: Cascade)
+  num_registre       String
+  //!officier 
+  officier           Officier @relation(fields: [matricule_officier], references: [matricule], onDelete: Cascade)
+  matricule_officier Int
+  //!communes 
+  commune            Commune  @relation(fields: [num_commune], references: [num_commune], onDelete: Cascade)
+  num_commune        Int
+
+  //! declarations 
+  declarations Personne[] @relation("declarations")
+
+  //! acte décès 
+  acte_deces     ActeDeces?     @relation("acte deces")
+  //! actes naissances 
+  acte_naissance ActeNaissance? @relation("acte naissance")
+  //! actes mariage 
+  acte_mariage   ActeMariage?   @relation("acte mariage")
+}
+
+enum TypeActe {
+  NAISSANCE
+  DECES
+  MARIAGE
+}
+
+model ActeDeces {
+  //! faire référence à l'acte d'état 
+  num_acte String @id
+  acte     Acte   @relation(fields: [num_acte], references: [num_acte], name: "acte deces", onDelete: Cascade)
+
+  //! sauvgarder l'acte d'état de naissance pour extraire les infos 
+  acte_naissance     ActeNaissance @relation(fields: [num_acte_naissance], references: [num_acte], name: "acte deces naissance", onDelete: Cascade)
+  num_acte_naissance String        @unique
+}
+
+model ActeMariage {
+  //! faire référence à l'acte d'état 
+  num_acte String @id
+  acte     Acte   @relation(fields: [num_acte], references: [num_acte], name: "acte mariage", onDelete: Cascade)
+
+  acte_naissance_mari      ActeNaissance @relation(fields: [num_acte_naissance_mari], references: [num_acte], name: "mari", onDelete: Cascade)
+  num_acte_naissance_mari  String
+  acte_naissance_femme     ActeNaissance @relation(fields: [num_acte_naissance_femme], references: [num_acte], name: "femme", onDelete: Cascade)
+  num_acte_naissance_femme String
+  //! temoignage
+  temoignages              Personne[]    @relation("temoignages")
+}
+
+model ActeNaissance {
+  //! faire référence à l'acte d'état 
+  num_acte   String  @id
+  acte       Acte    @relation(fields: [num_acte], references: [num_acte], name: "acte naissance", onDelete: Cascade)
+  sexe       SEXE
+  profession String? @db.VarChar(255)
+  nom        String  @db.VarChar(255)
+  prenom     String  @db.VarChar(255)
+
+  //! sauvgarder les parents 
+  pere        ActeNaissance?  @relation(fields: [num_pere], references: [num_acte], name: "pere", onDelete: Cascade)
+  num_pere    String?
+  enfant_pere ActeNaissance[] @relation("pere")
+
+  mere        ActeNaissance?  @relation(fields: [num_mere], references: [num_acte], name: "mere", onDelete: Cascade)
+  num_mere    String?
+  enfant_mere ActeNaissance[] @relation("mere")
+
+  //! si il est mort on sauvgarde ici 
+  acte_deces         ActeDeces?    @relation("acte deces naissance")
+  //! mariage 
+  acte_mariage_mari  ActeMariage[] @relation("mari")
+  acte_mariage_femme ActeMariage[] @relation("femme")
+}
+
+enum SEXE {
+  HOMME
+  FEMME
+}
+
+//! partir authentification 
+model Token {
+  token String @id
+
+  matricule Int
+  officier  Officier @relation(fields: [matricule], references: [matricule], name: "token")
+
+  type      TokenType
+  expiresIn DateTime?
+  ipAddress String
+}
+
+enum TokenType {
+  REFRESH
+  ACCESS
+  VALIDATION
+}
