@@ -11,10 +11,15 @@ and the default database should be postgres also
 - now we will proceed to seed our database the commande is the following 
 
 - now go the the .env file that is located in the source folder aka : 
+
     |
+    
     | backend
+    
     | frontend
+    
     | .env <== this file 
+    
 - and change the url to be more something like this : 
 ```
     DATABASE_URL="postgresql://<USER_NAME>:<PASSWORD>@localhost:5432/<database>?schema=public"
